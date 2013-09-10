@@ -5,8 +5,9 @@ import urllib2
 import json
 
 import public.applogging as logging
+import public.config as config
 
-api_key = '085a81c8e61e5d5f'
+api_key = config.API_KEY['wunderground']
 
 geolookup_url ='http://api.wunderground.com/api/%s/geolookup/lang:CN/q/%s,%s.json'
 forecast_url = 'http://api.wunderground.com/api/%s/forecast/lang:%s/q/%s,%s.json'
