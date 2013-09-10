@@ -93,7 +93,7 @@ def buildresponse(restype, resdata, host):
     elif restype == 'music':
         pass
     elif restype == 'news':
-        news_list = [[u'您所在区域天气如下：', u' ', 'http://{0}/static/weixinpub/top01.jpg'.format(host),u' '],
+        news_list = [[u'您所在区域天气如下：', u' ', 'http://{0}/static/weixinpub/top02.jpg'.format(host),u' '],
                     [resdata[3][0][0], u' ', resdata[3][0][1],u' '],
                     [resdata[3][1][0], u' ', resdata[3][1][1],u' ']]
                     #[resdata[3][2][0], u' ', resdata[3][2][1],u' ']]

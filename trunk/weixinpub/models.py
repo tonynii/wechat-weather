@@ -8,20 +8,16 @@ import hashlib
 from lxml import etree
 
 import public.applogging as logging
+import public.config as config
 from weixinpub.weather import Weather
 
 
-#TOKEN 到微信公众平台自己设置
-config={"TOKEN":'soulife',
-        "WEIXIN": 'weixin'}
 
 #提示信息
 tipstr = u'嘿嘿！发送位置信息可以获取天气信息哦！现在就试试吧！'
 welcomestr = u'嗨！欢迎您的关注，关怀冷暖，体贴入微！现在发送位置信息就可以获取天气信息啦！'
 byestr = u'嘿嘿！欢迎您再次使用本服务，关怀冷暖，体贴入微！'
 otherstr = u'嘿嘿！你的心思我怎么猜也猜不透！'
-
-
 
 class WeixinMsg(object):
     '''微信消息处理'''
@@ -38,7 +34,7 @@ class WeixinMsg(object):
             3. 开发者获得加密后的字符串可与signature对比，标识该请求来源于微信'''
         ret = False
         #获取TOKEN
-        token = config['TOKEN']
+        token = config.WECHATPUB['token']
         
         #对微信发送的请求，做验证
         tmplist = [ self.timestamp, token, self.nonce ]
