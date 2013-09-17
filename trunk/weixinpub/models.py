@@ -3,7 +3,6 @@
 from django.db import models
 from django.utils import timezone
 
-import time
 import hashlib
 from lxml import etree
 
@@ -21,11 +20,15 @@ otherstr = u'嘿嘿！你的心思我怎么猜也猜不透！'
 
 class WeixinMsg(object):
     '''微信消息处理'''
-    def __init__(self, timestamp, signature, nonce, otherpara = None):
+    def __init__(self, timestamp, signature, nonce, host = None, otherpara = None):
         self.signature = signature
         self.timestamp = timestamp
         self.nonce = nonce
+        self.host = host
         self.otherpara = otherpara
+        
+        self.from_user = ''
+        self.to_user = ''
     
     def verifysignature(self):
         '''加密/校验流程：
@@ -48,10 +51,6 @@ class WeixinMsg(object):
         return ret
     
     @classmethod
-    def gettimestamp(cls):
-        return int(time.time())
-    
-    @classmethod
     def bodydecode(cls,msgbody):
         #解析XML内容
         utf8_parser = etree.XMLParser(encoding='utf-8')
@@ -69,12 +68,17 @@ class WeixinMsg(object):
         logging.debug('recive data handle to: {0}'.format(tmpstr.encode('utf-8')))
         return recv
     
+    def get_from_user(self):
+        return self.from_user
+    
+    def get_to_user(self):
+        return self.to_user
+    
     def msghandle(self, msgbody):
         recv = self.bodydecode(msgbody)
-        res = ('text',(recv['FromUserName'],
-                            recv['ToUserName'],
-                            self.gettimestamp(),
-                            tipstr))
+        self.from_user = recv['FromUserName']
+        self.to_user = recv['ToUserName']
+        res = ('text', tipstr)
         if recv:
             if recv['MsgType'] == 'text':
                 pass
@@ -84,45 +88,27 @@ class WeixinMsg(object):
                                                recv['Location_X']))
                 weather_info = weather_obj.getweatherbydegree(recv['Location_Y'],
                                                recv['Location_X'])
-                news_list = [[weather_info[0][0] + ' ' + weather_info[0][1], weather_info[0][2]],
-                            [weather_info[2][0] + ' ' + weather_info[2][1], weather_info[2][2]],
-                            [weather_info[4][0] + ' ' + weather_info[4][1], weather_info[4][2]]]
-                res = ('news',(recv['FromUserName'],
-                            recv['ToUserName'],
-                            self.gettimestamp(),
-                            news_list))
+                news_list = [[u'您所在区域天气如下：', u' ', 'http://{0}/static/weixinpub/top02.jpg'.format(self.host),u' '],
+                            [weather_info[0][0] + ' ' + weather_info[0][1], u' ', weather_info[0][2], u''],
+                            [weather_info[2][0] + ' ' + weather_info[2][1], u' ', weather_info[2][2], u'']]
+                res = ('news', news_list)
             elif recv['MsgType'] == 'image':
                 pass
             elif recv['MsgType'] == 'link':
                 pass
             elif recv['MsgType'] == 'event':
                 if recv['Event'] == 'subscribe':
-                    res = ('text',(recv['FromUserName'],
-                            recv['ToUserName'],
-                            self.gettimestamp(),
-                            welcomestr))
+                    res = ('text',welcomestr)
                 elif recv['Event'] == 'unsubscribe':
-                    res = ('text',(recv['FromUserName'],
-                            recv['ToUserName'],
-                            self.gettimestamp(),
-                            byestr))
+                    res = ('text', byestr)
                 elif recv['Event'] == 'CLICK':
-                    res = ('text',(recv['FromUserName'],
-                            recv['ToUserName'],
-                            self.gettimestamp(),
-                            otherstr))
+                    res = ('text',otherstr)
                 else:
-                    res = ('text',(recv['FromUserName'],
-                            recv['ToUserName'],
-                            self.gettimestamp(),
-                            otherstr))
+                    res = ('text', otherstr)
                     logging.warning('Event type error!({0})'.format(recv['Event']))
             else:
                 logging.warning('MsgType error!({0})'.format(recv['MsgType']))
-                res = ('text',(recv['FromUserName'],
-                            recv['ToUserName'],
-                            self.gettimestamp(),
-                            otherstr))
+                res = ('text', otherstr)
         else:
             res = ('error', 'Msg handle error!!!')
         return res

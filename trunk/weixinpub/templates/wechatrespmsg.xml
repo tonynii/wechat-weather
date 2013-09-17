@@ -1,0 +1,41 @@
+<xml>
+<ToUserName><![CDATA[{{wechatmsg.to_user}}]]></ToUserName>
+<FromUserName><![CDATA[{{wechatmsg.from_user}}]]></FromUserName>
+<CreateTime>{{wechatmsg.timestamp}}</CreateTime>
+{# response text msg #}
+{% ifequal wechatmsg.msg_type 'text' %}
+<MsgType><![CDATA[text]]></MsgType>
+<Content><![CDATA[{{wechatmsg.content}}]]></Content>
+{% endifequal %}
+{# response music msg #}
+{% ifequal wechatmsg.msg_type 'music' %}
+<MsgType><![CDATA[music]]></MsgType>
+<Music>
+<Title><![CDATA[{{title}}]]></Title>
+<Description><![CDATA[{{desc}}]]></Description>
+<MusicUrl><![CDATA[{{url}}]]></MusicUrl>
+<HQMusicUrl><![CDATA[{{hqurl}}]]></HQMusicUrl>
+</Music>
+{% endifequal %}
+{# response mews msg #}
+{% ifequal wechatmsg.msg_type 'news' %}
+<MsgType><![CDATA[news]]></MsgType>
+<ArticleCount>{{wechatmsg.news_num}}</ArticleCount>
+<Articles>
+{% for news in wechatmsg.news_list %}
+<item>
+<Title><![CDATA[{{news.title}}]]></Title> 
+<Description><![CDATA[{{news.desc}}]]></Description>
+<PicUrl><![CDATA[{{news.picurl}}]]></PicUrl>
+<Url><![CDATA[{{news.url}}]]></Url>
+</item>
+{% endfor %}
+</Articles>
+{% endifequal %}
+
+{# response other msg #}
+{% ifequal wechatmsg.msg_type 'other' %}
+<MsgType><![CDATA[other]]></MsgType>
+<Content><![CDATA[error]></Content>
+{% endifequal %}
+</xml>
