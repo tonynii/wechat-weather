@@ -3,11 +3,10 @@
 import public.config as config
 
 if config.DEPLOY_ENV == 'bae':
-    from bae.api import logging
+    import bae.api.logging as logger
 else:
     import logging
-
-logger = logging.getLogger('soulife')
+    logger = logging.getLogger('soulife')
 
 
 def critical(msg):

@@ -1,48 +1,17 @@
 #!/usr/bin/env python
 # coding=utf-8
-
+from django.template.loader import get_template
+from django.template import Context
 from django.http import HttpResponse
+
+import time
 
 from weixinpub.models import WeixinMsg
 import public.applogging as logging
 
+#消息模板文件名
+MSG_TEMP_FILE = u'wechatrespmsg.xml'
 
-#消息结构
-textTpl = u"""<xml>
-            <ToUserName><![CDATA[{0}]]></ToUserName>
-            <FromUserName><![CDATA[{1}]]></FromUserName>
-            <CreateTime>{2}</CreateTime>
-            <MsgType><![CDATA[text]]></MsgType>
-            <Content><![CDATA[{3}]]></Content>
-            </xml>"""
-musicTpl = u""" <xml>
-            <ToUserName><![CDATA[{0}]]></ToUserName>
-            <FromUserName><![CDATA[{1}]]></FromUserName>
-            <CreateTime>{2}</CreateTime>
-            <MsgType><![CDATA[music]]></MsgType>
-            <Music>
-            <Title><![CDATA[{3}]]></Title>
-            <Description><![CDATA[{4}]]></Description>
-            <MusicUrl><![CDATA[{5}]]></MusicUrl>
-            <HQMusicUrl><![CDATA[{6}]]></HQMusicUrl>
-            </Music>
-            </xml>"""
-newsTpl = u"""<xml>
-            <ToUserName><![CDATA[{0}]]></ToUserName>
-            <FromUserName><![CDATA[{1}]]></FromUserName>
-            <CreateTime>{2}</CreateTime>
-            <MsgType><![CDATA[news]]></MsgType>
-            <ArticleCount>{3}</ArticleCount>
-            <Articles>
-            {4}
-            </Articles>
-            </xml> """
-newsBody = u"""<item>
-            <Title><![CDATA[{0}]]></Title>
-            <Description><![CDATA[{1}]]></Description>
-            <PicUrl><![CDATA[{2}]]></PicUrl>
-            <Url><![CDATA[{3}]]></Url>
-            </item>"""
 
 
 def weixinpub(request):
@@ -75,46 +44,96 @@ def weixinpub(request):
         logging.debug(u'recvice POST: {0}'.format(str(request.GET.items())))
         data = unicode(request.body,"utf8",errors='ignore')
         logging.debug(u'POST data is: {0}'.format(data.replace('\n',' ')))
-        rcevmsg = WeixinMsg(timestamp, signature, nonce)
+        rcevmsg = WeixinMsg(timestamp, signature, nonce, host)
         if rcevmsg.verifysignature():
             restype, resdata = rcevmsg.msghandle(data)
-            echostr = buildresponse(restype, resdata, host)
+            t = get_template(MSG_TEMP_FILE)
+            if restype == 'text':
+                echodict = WeChatRespTextMsg(rcevmsg.get_from_user(),rcevmsg.get_to_user(),resdata)
+                echostr = t.render(Context({'wechatmsg':echodict}))
+            elif restype == 'music':
+                pass
+            elif restype == 'news':
+                echodict = WeChatRespNewsMsg(rcevmsg.get_from_user(),rcevmsg.get_to_user())
+                for i in resdata:
+                    echodict.append_news(title = unicode(i[0]),
+                                  desc = unicode(i[1]),
+                                  picurl = unicode(i[2]),
+                                  url = unicode(i[3]))
+                echostr = t.render(Context({'wechatmsg':echodict}))
+            else:
+                logging.warning('MsgType error!({0})'.format(restype))
+                #echostr = self.textdecode(resdata[0],resdata[1],resdata[2],resdata[3])
             logging.debug(u'Reponse data is: {0}'.format(echostr.replace('\n','')))
         else:
             logging.error(u'Verify signature error!!!')
             echostr = 'Verify signature error!!!'
         return HttpResponse(echostr)
     else:
+        logging.error(u'request method error!!!')
         return HttpResponse('other')
 
-def buildresponse(restype, resdata, host):
-    if restype == 'text':
-        echostr = textdecode(resdata[0],resdata[1],resdata[2],resdata[3])
-    elif restype == 'music':
-        pass
-    elif restype == 'news':
-        news_list = [[u'您所在区域天气如下：', u' ', 'http://{0}/static/weixinpub/top02.jpg'.format(host),u' '],
-                    [resdata[3][0][0], u' ', resdata[3][0][1],u' '],
-                    [resdata[3][1][0], u' ', resdata[3][1][1],u' ']]
-                    #[resdata[3][2][0], u' ', resdata[3][2][1],u' ']]
-        echostr = newsdecode(resdata[0],resdata[1],resdata[2], news_list)
-    else:
-        logging.warning('MsgType error!({0})'.format(restype))
-        #echostr = self.textdecode(resdata[0],resdata[1],resdata[2],resdata[3])
-    return echostr
 
-def textdecode(toname, fromname, timestamp, msg): 
-    echostr = textTpl.format(toname, fromname,timestamp,unicode(msg))
-    return echostr
 
-def newsdecode(toname, fromname, timestamp, newslists):
-    nbody = ''
-    for i in newslists:
-        nbody += newsBody.format(unicode(i[0]),
-                                 unicode(i[1]),
-                                 unicode(i[2]),
-                                 unicode(i[3]))
+class WeChatRespMsg(object):
+    def __init__(self, to_user, from_user):
+        self.msg_type = 'other'
+        self.to_user = to_user
+        self.from_user = from_user
+        self.timestamp = '01234'
     
-    echostr = newsTpl.format(toname, fromname, timestamp,len(newslists),nbody)
-    return echostr
+    @classmethod
+    def get_timestamp(cls):
+        return int(time.time())
+    
+    def update_msg(self):
+        self.timestamp = self.get_timestamp()
+    
+    def set_type(self, msg_type):
+        self.msg_type = msg_type
+    
+    
+    
+class WeChatRespTextMsg(WeChatRespMsg):
+    def __init__(self, to_user, from_user, content):
+        WeChatRespMsg.__init__(self, to_user, from_user)
+        self.content = content
+        self.set_type('text')
+        self.update_msg()
+
+
+
+class WeChatRespMusicMsg(WeChatRespMsg):
+    def __init__(self, to_user, from_user, title, desc, url, hqurl=u''):
+        WeChatRespMsg.__init__(self, to_user, from_user)
+        self.title = title
+        self.desc = desc
+        self.url = url
+        self.hqurl = hqurl
+        self.set_type('music')
+        self.update_msg()
+
+
+
+class WeChatRespNewsMsg(WeChatRespMsg):
+    def __init__(self, to_user, from_user):
+        WeChatRespMsg.__init__(self, to_user, from_user)
+        self.set_type('news')
+        self.news_list = []
+        self.news_num = 0
+        self.update_msg()
+    
+    def update_msg(self):
+        WeChatRespMsg.update_msg(self)
+        self.news_num = len(self.news_list)
+    
+    def append_news(self, title, picurl, desc=u'', url=u''):
+        self.news_list.append({'title': unicode(title),
+                                'desc': unicode(desc),
+                                'picurl': unicode(picurl),
+                                'url': unicode(url)})    
+        self.update_msg()
+    
+
+
 
