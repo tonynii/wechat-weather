@@ -3,6 +3,7 @@
 from django.template.loader import get_template
 from django.template import Context
 from django.http import HttpResponse
+from django.shortcuts import render_to_response
 
 import time
 
@@ -11,8 +12,12 @@ import public.applogging as logging
 
 #消息模板文件名
 MSG_TEMP_FILE = u'wechatrespmsg.xml'
+ABOUT_TEMP_FILE = u'about.html'
 
 
+
+def about(request):
+    return render_to_response(ABOUT_TEMP_FILE)
 
 def weixinpub(request):
     try:
@@ -49,29 +54,29 @@ def weixinpub(request):
             restype, resdata = rcevmsg.msghandle(data)
             t = get_template(MSG_TEMP_FILE)
             if restype == 'text':
-                echodict = WeChatRespTextMsg(rcevmsg.get_from_user(),rcevmsg.get_to_user(),resdata)
-                echostr = t.render(Context({'wechatmsg':echodict}))
+                echomsg = WeChatRespTextMsg(rcevmsg.get_from_user(),rcevmsg.get_to_user(),resdata)
+                echostr = t.render(Context({'wechatmsg':echomsg}))
             elif restype == 'music':
                 pass
             elif restype == 'news':
-                echodict = WeChatRespNewsMsg(rcevmsg.get_from_user(),rcevmsg.get_to_user())
+                echomsg = WeChatRespNewsMsg(rcevmsg.get_from_user(),rcevmsg.get_to_user())
                 for i in resdata:
-                    echodict.append_news(title = unicode(i[0]),
+                    echomsg.append_news(title = unicode(i[0]),
                                   desc = unicode(i[1]),
                                   picurl = unicode(i[2]),
                                   url = unicode(i[3]))
-                echostr = t.render(Context({'wechatmsg':echodict}))
+                echostr = t.render(Context({'wechatmsg':echomsg}))
             else:
                 logging.warning('MsgType error!({0})'.format(restype))
-                #echostr = self.textdecode(resdata[0],resdata[1],resdata[2],resdata[3])
+                echostr = u'MsgType error!({0})'.format(restype)
             logging.debug(u'Reponse data is: {0}'.format(echostr.replace('\n','')))
         else:
             logging.error(u'Verify signature error!!!')
-            echostr = 'Verify signature error!!!'
-        return HttpResponse(echostr)
+            echostr = u'Verify signature error!!!'
     else:
         logging.error(u'request method error!!!')
-        return HttpResponse('other')
+        echostr = u'request method error!!!'
+    return HttpResponse(echostr)
 
 
 
