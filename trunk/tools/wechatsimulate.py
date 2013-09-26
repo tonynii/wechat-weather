@@ -109,25 +109,25 @@ def make_post(action):
     nonce = str(random.randint(1,100000))
     signature = makeSignature(Token, timestamp, nonce)
 
-    conn = httplib.HTTPConnection(interface_url,port)
+    
     if py_major_ver == 3:
+    	conn = httplib.HTTPConnection(interface_url,port)
         headers = { "Content-type": "text/xml",
                 "Content-Length": "{0}".format(len(messages[action].encode('utf-8')))}
         params = urllib.parse.urlencode({'signature': signature, 'timestamp': timestamp, 'nonce': nonce})
         conn.request("POST", interface_path + "?" +params, messages[action].encode('utf-8'), headers)
+        response = conn.getresponse()
+        print("{0} {1}\n{2}".format(response.status,response.reason,str(response.read(), encoding = 'utf-8')))
+        conn.close() 
     elif py_major_ver == 2:
+    	conn = httplib.HTTPConnection(interface_url,port)
         headers = { "Content-type": "text/xml",
                 "Content-Length": "{0}".format(len(messages[action]))}
         params = urllib.urlencode({'signature': signature, 'timestamp': timestamp, 'nonce': nonce})
-        conn.request("POST", interface_path + "?" +params, "", headers)
-        conn.send(messages[action])
-
-    response = conn.getresponse()
-
-    print("{0} {1}".format(response.status,response.reason))
-    print(str(response.read(), encoding = 'utf-8'))
-
-    conn.close() 
+        conn.request("POST", interface_path + "?" +params, messages[action], headers)
+        response = conn.getresponse()
+        print("{0} {1}\n{2}".format(response.status,response.reason,response.read()))
+        conn.close() 
     
 def makeSignature(token, timestamp, nonce):
     '''生成签名'''
