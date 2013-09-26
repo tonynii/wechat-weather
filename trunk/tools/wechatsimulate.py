@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 #/usr/bin/env python
 
-__version__ = '0.1'
-__author__  = 'http://weibo.com/wtmmac'
+__version__ = '0.5'
+__author__  = 'http://weibo.com/u/2372023982?'
 
 '''
 微信Server模拟
@@ -56,11 +56,21 @@ messages = {
     <FromUserName><![CDATA[oAsR8jt8CRoyj8LBqosYAMUhi2v8]]></FromUserName> 
     <CreateTime>1348831860</CreateTime>
     <MsgType><![CDATA[text]]></MsgType>
-    <Content><![CDATA[test text]]></Content>
+    <Content><![CDATA[文本消息]]></Content>
     <MsgId>1234567890123456</MsgId>
     </xml>''',
     # 用户发送位置信息
-    'location': '''<xml><ToUserName><![CDATA[gh_a207d2fdeaec]]></ToUserName><FromUserName><![CDATA[oAsR8jt8CRoyj8LBqosYAMUhi2v8]]></FromUserName><CreateTime>1376352417</CreateTime><MsgType><![CDATA[location]]></MsgType><Location_X>32.016609</Location_X><Location_Y>118.743431</Location_Y><Scale>20</Scale><Label><![CDATA[中華人民共和國江蘇省南京市建鄴區廬山路18号 邮政编码: 210019]]></Label><MsgId>5911388618785554663</MsgId></xml>''',
+    'location': '''<xml>
+    <ToUserName><![CDATA[gh_a207d2fdeaec]]></ToUserName>
+    <FromUserName><![CDATA[oAsR8jt8CRoyj8LBqosYAMUhi2v8]]></FromUserName>
+    <CreateTime>1376352417</CreateTime>
+    <MsgType><![CDATA[location]]></MsgType>
+    <Location_X>32.016609</Location_X>
+    <Location_Y>118.743431</Location_Y>
+    <Scale>20</Scale>
+    <Label><![CDATA[中華人民共和國江蘇省南京市建鄴區廬山路18号 邮政编码: 210019]]></Label>
+    <MsgId>5911388618785554663</MsgId>
+    </xml>''',
     #用户发送图片信息
     'image': '''<xml>
     <ToUserName><![CDATA[gh_a207d2fdeaec]]></ToUserName>
@@ -94,21 +104,20 @@ messages = {
 
 def make_post(action):
     '''模拟用户行为产生的消息提交给接口程序'''
-    conn = httplib.HTTPConnection(interface_url,port)
-
-    headers = { "Content-type": "text/xml",
-                "Content-Length": "{0}".format(len(messages[action]))}
-
     # 生成签名相关变量
     timestamp = str(int(time.time()))
     nonce = str(random.randint(1,100000))
     signature = makeSignature(Token, timestamp, nonce)
-    
+
+    conn = httplib.HTTPConnection(interface_url,port)
     if py_major_ver == 3:
+        headers = { "Content-type": "text/xml",
+                "Content-Length": "{0}".format(len(messages[action].encode('utf-8')))}
         params = urllib.parse.urlencode({'signature': signature, 'timestamp': timestamp, 'nonce': nonce})
-        conn.request("POST", interface_path + "?" +params, "", headers)
-        conn.send(bytes(messages[action],encoding = 'utf-8'))
+        conn.request("POST", interface_path + "?" +params, messages[action].encode('utf-8'), headers)
     elif py_major_ver == 2:
+        headers = { "Content-type": "text/xml",
+                "Content-Length": "{0}".format(len(messages[action]))}
         params = urllib.urlencode({'signature': signature, 'timestamp': timestamp, 'nonce': nonce})
         conn.request("POST", interface_path + "?" +params, "", headers)
         conn.send(messages[action])
@@ -116,21 +125,19 @@ def make_post(action):
     response = conn.getresponse()
 
     print("{0} {1}".format(response.status,response.reason))
-    print(response.read())
+    print(str(response.read(), encoding = 'utf-8'))
 
     conn.close() 
     
-def makeSignature(Token, timestamp, nonce):
+def makeSignature(token, timestamp, nonce):
     '''生成签名'''
-    try:
-        Token = Token
-    except Exception, e:
-        pass
-
-    sorted_arr = map(str, sorted([Token, timestamp, nonce]))
+    sorted_arr = map(str, sorted([token, timestamp, nonce]))
 
     sha1obj = hashlib.sha1()
-    sha1obj.update(''.join(sorted_arr))
+    if py_major_ver == 3:
+        sha1obj.update(''.join(sorted_arr).encode('utf-8'))
+    elif py_major_ver == 2:
+        sha1obj.update(''.join(sorted_arr))
     hash = sha1obj.hexdigest()
 
     return hash
