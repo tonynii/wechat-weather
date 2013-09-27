@@ -56,7 +56,7 @@ messages = {
     <FromUserName><![CDATA[oAsR8jt8CRoyj8LBqosYAMUhi2v8]]></FromUserName> 
     <CreateTime>1348831860</CreateTime>
     <MsgType><![CDATA[text]]></MsgType>
-    <Content><![CDATA[文本消息]]></Content>
+    <Content><![CDATA[南京]]></Content>
     <MsgId>1234567890123456</MsgId>
     </xml>''',
     # 用户发送位置信息
@@ -111,8 +111,8 @@ def make_post(action):
 
     
     if py_major_ver == 3:
-    	conn = httplib.HTTPConnection(interface_url,port)
-        headers = { "Content-type": "text/xml",
+        conn = httplib.HTTPConnection(interface_url,port)
+        headers = { "Content-type": "text/xml",\
                 "Content-Length": "{0}".format(len(messages[action].encode('utf-8')))}
         params = urllib.parse.urlencode({'signature': signature, 'timestamp': timestamp, 'nonce': nonce})
         conn.request("POST", interface_path + "?" +params, messages[action].encode('utf-8'), headers)
@@ -120,8 +120,8 @@ def make_post(action):
         print("{0} {1}\n{2}".format(response.status,response.reason,str(response.read(), encoding = 'utf-8')))
         conn.close() 
     elif py_major_ver == 2:
-    	conn = httplib.HTTPConnection(interface_url,port)
-        headers = { "Content-type": "text/xml",
+        conn = httplib.HTTPConnection(interface_url,port)
+        headers = { "Content-type": "text/xml",\
                 "Content-Length": "{0}".format(len(messages[action]))}
         params = urllib.urlencode({'signature': signature, 'timestamp': timestamp, 'nonce': nonce})
         conn.request("POST", interface_path + "?" +params, messages[action], headers)
