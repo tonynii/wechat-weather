@@ -197,7 +197,7 @@ class WeixinMsg(object):
         except CityInfo.MultipleObjectsReturned:
             logging.warning(u"database has multiple city - {0}.".format(msg))
             res_type = 'text'
-            res_msg = u'您输入的城市({0})有多个,请重输！'.format(rmsg)
+            res_msg = u'您输入的城市({0})有多个,请重输！'.format(msg)
         except:
             logging.warning(u"database has unknown error - {0}.".format(msg))
             res_type = 'text'
