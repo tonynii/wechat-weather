@@ -9,16 +9,17 @@ import public.config as config
 
 api_key = config.API_KEY['wunderground']
 
-geolookup_url ='http://api.wunderground.com/api/%s/geolookup/lang:CN/q/%s,%s.json'
-forecast_url = 'http://api.wunderground.com/api/%s/forecast/lang:%s/q/%s,%s.json'
+
 
 class Weather(object):
     
-    def __init__(self):
-        pass
+    def __init__(self, key = api_key):
+        self.api_key = key
+        self.geolookup_url ='http://api.wunderground.com/api/%s/geolookup/lang:CN/q/%s,%s.json'
+        self.forecast_url = 'http://api.wunderground.com/api/%s/forecast/lang:%s/q/%s,%s.json'
     
     def getweatherbydegree (self, longitude, latitude):
-        #url_geo = geolookup_url % (api_key, latitude, longitude)
+        #url_geo = self.geolookup_url % (self.api_key, latitude, longitude)
         #geo_rep = urllib2.urlopen(url_geo)
         #geo_string = geo_rep.read()
         #geo_rep.close()
@@ -34,7 +35,7 @@ class Weather(object):
         #    logging.exception(geo_json)
         #    return "查询位置失败(2)，请重试！"
         
-        url_forecast =forecast_url % (api_key, 'CN', latitude, longitude)
+        url_forecast = self.forecast_url % (self.api_key, 'CN', latitude, longitude)
         forecast_rep = urllib2.urlopen(url_forecast)
         forecast_string = forecast_rep.read()
         forecast_rep.close()
@@ -54,7 +55,6 @@ class Weather(object):
             fcttext = forecast_json['forecast']['txt_forecast']['forecastday'][i]['fcttext_metric']
             ret_str.append([title,fcttext,icon_url])
         return ret_str
-        #return "您所在区域天气如下:\n\n%s\n发布时间: %s\n数据来自: The Weather Channel" % (city.encode('utf-8'),ret_str.encode('utf-8'), forecast_date.encode('utf-8'))
         
     
 if __name__ == '__main__':
