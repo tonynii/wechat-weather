@@ -9,7 +9,8 @@ from lxml import etree
 
 import public.applogging as logging
 import public.config as config
-from weixinpub.weather import Weather
+import public.geocoding as geocoding
+from public.weather import Weather
 
 
 
@@ -82,16 +83,9 @@ class WeixinMsg(object):
         res_msg = tipstr
         if recv:
             if recv['MsgType'] == 'text':
-                pass
+                res_type, res_msg = self.handle_text_msg(recv['Content'])
             elif recv['MsgType'] == 'location':
-                weather_obj = Weather()
-                logging.debug('location data is: {0} {1} '.format(recv['Location_Y'],
-                                               recv['Location_X']))
-                weather_info = weather_obj.getweatherbydegree(recv['Location_Y'],
-                                               recv['Location_X'])
-                news_list = [[u'您所在区域天气如下：', u' ', 'http://{0}/static/weixinpub/top02.jpg'.format(self.host),u' '],
-                            [weather_info[0][0] + ' ' + weather_info[0][1], u' ', weather_info[0][2], u''],
-                            [weather_info[2][0] + ' ' + weather_info[2][1], u' ', weather_info[2][2], u'']]
+                news_list = self.get_weather_by_latlng(recv['Location_X'], recv['Location_Y'])
                 res_type = 'news'
                 res_msg = news_list
             elif recv['MsgType'] == 'image':
@@ -144,6 +138,79 @@ class WeixinMsg(object):
             res_type = 'error'
             res_msg = 'Msg handle error!!!'
         return res_type, res_msg
+    
+    def get_weather_by_latlng(self, latitude, longitude, city = u'区域'):
+        weather_obj = Weather()
+        logging.debug('location data is: {0} {1} '.format(latitude, longitude))
+        weather_info = weather_obj.getweatherbydegree(longitude, latitude)
+        print((latitude, longitude))
+        news_list = [[u'您所在{0}的天气如下：'.format(city), u' ',
+                            'http://{1}/static/weixinpub/top02.jpg'.format(city, self.host),u' '],
+                    [weather_info[0][0] + ' ' + weather_info[0][1], u' ', weather_info[0][2], u''],
+                    [weather_info[2][0] + ' ' + weather_info[2][1], u' ', weather_info[2][2], u'']]
+        return news_list
+    
+    def save_city_info_to_db(self, latitude, longitude, city, state_province='', country=''):
+        try:
+            city_info_list = CityInfo.objects.filter(city=city)
+        except:
+            logging.info(u"database has unknown error - {0}.".format(city))
+        else:
+            if len(city_info_list) >= 1:
+                logging.warning(u"database has multiple city - {0}, and will delete.".format(city))
+                city_info_list.delete()
+            city_info = CityInfo(latitude=latitude,
+                                longitude=longitude,
+                                city = city,
+                                state_province = state_province,
+                                country = country)
+            city_info.save()
+        
+    def handle_text_msg(self, msg):
+        #query city in database
+        try:
+            city_info = CityInfo.objects.get(city=msg)
+        except CityInfo.DoesNotExist:
+            logging.info(u"database has not city - {0}.".format(msg))
+            #query city info
+            geo = geocoding.GeoCoding()
+            city_info_list = geo.get_latlng_by_name(msg)
+            if len(city_info_list):
+                if city_info_list[0]['city'] != '':
+                    news_list = self.get_weather_by_latlng(city_info_list[0]['lat'],
+                                                       city_info_list[0]['lng'],
+                                                       city_info_list[0]['city'])
+                    self.save_city_info_to_db(latitude=city_info_list[0]['lat'],
+                                        longitude=city_info_list[0]['lng'],
+                                        city = city_info_list[0]['city'],
+                                        state_province = city_info_list[0]['state_province'],
+                                        country = city_info_list[0]['country'])
+                else:
+                    news_list = self.get_weather_by_latlng(city_info_list[0]['lat'],
+                                                       city_info_list[0]['lng'])
+                res_type = 'news'
+                res_msg = news_list
+            else:
+                logging.warning("query city info failed - {0}.".format(msg))
+                res_type = 'text'
+                res_msg = u'查找不到您输入的城市({0}),请重输！'.format(msg)
+        except CityInfo.MultipleObjectsReturned:
+            logging.warning(u"database has multiple city - {0}.".format(msg))
+            res_type = 'text'
+            res_msg = u'您输入的城市({0})有多个,请重输！'.format(rmsg)
+        except:
+            logging.warning(u"database has unknown error - {0}.".format(msg))
+            res_type = 'text'
+            res_msg = u'您输入的城市({0})错误,请重输！'.format(msg)
+        else:
+            news_list = self.get_weather_by_latlng(city_info.latitude,
+                                                   city_info.longitude,
+                                                   city_info.city)
+            res_type = 'news'
+            res_msg = news_list
+        return res_type, res_msg
+    
+    
 
 class WechatUser(models.Model):
     open_id = models.CharField(max_length=50)
@@ -158,4 +225,15 @@ class WechatUser(models.Model):
     
     def __unicode__(self):
         return self.open_id
+
+
+class CityInfo(models.Model):
+    city = models.CharField(max_length=60, null = True)
+    state_province = models.CharField(max_length=30, null = True)
+    country = models.CharField(max_length=50, null = True)
+    longitude = models.FloatField(null = True)
+    latitude = models.FloatField(null = True)
+    
+    def __unicode__(self):
+        return self.city
 

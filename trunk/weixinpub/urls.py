@@ -9,6 +9,7 @@ from weixinpub import views
 
 urlpatterns = patterns('',
     url(r'^$', views.weixinpub, name='weixinpub'),
+    url(r'^about$', views.about, name='about'),
 )
 
 #urlpatterns += staticfiles_urlpatterns()
