@@ -1,0 +1,1 @@
+Use Python27 and Django 1.5 development Wechat public weather server.
